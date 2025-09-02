@@ -24,9 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const text = await response.text();
             validSubscriptionCodes = text.split('\n').map(code => code.trim()).filter(Boolean);
+            if (validSubscriptionCodes.length === 0) console.warn('Subscription codes file is empty or missing.');
         } catch (error) {
             console.error('Error loading subscription codes:', error);
-            alert('خطا در بارگذاری کدهای اشتراک.');
+            alert('خطا در بارگذاری کدهای اشتراک. لطفا مطمئن شوید فایل subscription_codes.txt وجود دارد.');
         }
     }
 
@@ -37,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const text = await response.text();
             dnsList = text.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
                 const parts = line.split(',');
-                if (parts.length < 4) return null; // Ensure there are enough parts
+                if (parts.length < 4) return null;
                 
                 const dns1 = parts[0].split(':')[1]?.trim();
                 const dns2 = parts[1].split(':')[1]?.trim();
@@ -47,9 +48,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dns1 && dns2 && country && flag) return { dns1, dns2, country, flag };
                 return null;
             }).filter(Boolean);
+            if (dnsList.length === 0) console.warn('DNS list file is empty or has incorrect format.');
         } catch (error) {
             console.error('Error loading DNS list:', error);
-            alert('خطا در بارگذاری لیست DNS.');
+            alert('خطا در بارگذاری لیست DNS. لطفا مطمئن شوید فایل dns_list.txt وجود دارد و فرمت آن صحیح است.');
         }
     }
 
@@ -65,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function generateDns() {
         if (dnsList.length === 0) {
-            alert('لیست DNS در دسترس نیست.');
+            alert('لیست DNS خالی است یا بارگذاری نشده. لطفاً فایل dns_list.txt را بررسی کنید.');
             return;
         }
         
@@ -75,7 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedDns = `dns1: ${selectedDns.dns1}\ndns2: ${selectedDns.dns2}`;
         dnsOutput.textContent = formattedDns;
         
-        // Display country and flag
         dnsFlagEl.textContent = selectedDns.flag;
         dnsCountryEl.textContent = selectedDns.country;
 
@@ -83,9 +84,13 @@ document.addEventListener('DOMContentLoaded', () => {
         pingValueEl.textContent = ping;
         
         pingValueEl.classList.remove('ping-good', 'ping-medium', 'ping-bad');
-        if (ping < 150) pingValueEl.classList.add('ping-good');
-        else if (ping < 200) pingValueEl.classList.add('ping-medium');
-        else pingValueEl.classList.add('ping-bad');
+        if (ping < 150) {
+            pingValueEl.classList.add('ping-good');
+        } else if (ping < 200) {
+            pingValueEl.classList.add('ping-medium');
+        } else {
+            pingValueEl.classList.add('ping-bad');
+        }
         
         dnsResultContainer.classList.remove('hidden');
     }
