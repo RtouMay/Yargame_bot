@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دریافت DNS - یارگیم</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div id="login-section">
+            <img src="aks/yargame-logo.png" alt="لوگوی یارگیم" class="logo">
+            <h1>ورود به بخش DNS یارگیم</h1>
+            <p>لطفاً کد اشتراک خود را برای دسترسی وارد کنید.</p>
+            <input type="text" id="subscription-code" placeholder="کد اشتراک...">
+            <button id="login-btn" class="action-button">ورود</button>
+        </div>
+
+        <div id="generator-section" class="hidden">
+            <img src="aks/yargame-logo.png" alt="لوگوی یارگیم" class="logo small-logo">
+            <h1>DNS Generator</h1>
+            <p>برای دریافت DNS جدید، روی دکمه زیر کلیک کنید.</p>
+            <button id="generate-btn" class="action-button">Generate DNS</button>
+            <div id="dns-result-container" class="hidden">
+                <h2>DNS شما:</h2>
+                <pre id="dns-output"></pre>
+                <div id="ping-container">
+                    Ping: <span id="ping-value">...</span> ms
+                </div>
+                <button id="copy-btn" class="copy-button">کپی کردن</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

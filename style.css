@@ -1,0 +1,187 @@
+@font-face {
+    font-family: 'YekanBakh';
+    src: url('fonts/YekanBakh-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'YekanBakh';
+    src: url('fonts/YekanBakh-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --primary-color: #ffc107; /* Golden Yellow */
+    --primary-color-dark: #e0a800; /* Darker Golden Yellow for hover */
+    --dark-bg: #121212;
+    --container-bg: #1c1c1c;
+    --input-bg: #333;
+    --text-light: #f0f0f0;
+    --text-medium: #aaa;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'YekanBakh', Arial, sans-serif;
+    background-color: var(--dark-bg);
+    color: var(--text-light);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    direction: rtl;
+    font-weight: normal;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.container {
+    width: 100%;
+    max-width: 450px;
+    background-color: var(--container-bg);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.logo {
+    max-width: 180px;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 0 10px rgba(255, 193, 7, 0.5));
+}
+
+.logo.small-logo {
+    max-width: 100px;
+    margin-bottom: 15px;
+}
+
+h1 {
+    color: var(--primary-color);
+    font-weight: bold;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+p {
+    color: var(--text-medium);
+    margin-bottom: 30px;
+    line-height: 1.6;
+    font-weight: normal;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--input-bg);
+    border: 1px solid #555;
+    border-radius: 8px;
+    color: var(--text-light);
+    font-family: 'YekanBakh', sans-serif;
+    font-size: 1em;
+    text-align: center;
+    margin-bottom: 20px;
+    font-weight: normal;
+}
+
+.action-button {
+    background-color: var(--primary-color);
+    color: var(--dark-bg);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-family: 'YekanBakh', sans-serif;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    width: 100%;
+    box-shadow: 0 0 10px rgba(255, 193, 7, 0.3);
+}
+
+.action-button:hover {
+    transform: translateY(-3px);
+    background-color: var(--primary-color-dark);
+    box-shadow: 0 5px 15px rgba(255, 193, 7, 0.5);
+}
+
+#dns-result-container {
+    margin-top: 30px;
+    background-color: var(--component-bg);
+    padding: 20px;
+    border-radius: 10px;
+    animation: fadeIn 0.5s ease;
+    border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+#dns-result-container h2 {
+    margin: 0 0 15px 0;
+    color: var(--primary-color);
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+pre {
+    background-color: #222;
+    padding: 15px;
+    border-radius: 8px;
+    color: #ffd700;
+    font-size: 1.2em;
+    font-family: 'Consolas', 'Courier New', monospace;
+    text-align: left;
+    direction: ltr;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    border: 1px dashed rgba(255, 193, 7, 0.2);
+    font-weight: normal;
+}
+
+#ping-container {
+    margin-top: 15px;
+    font-size: 1em;
+    font-weight: normal;
+    color: var(--text-medium);
+}
+
+#ping-value {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.ping-good { color: #27ae60; }
+.ping-medium { color: #f39c12; }
+.ping-bad { color: #c0392b; }
+
+.copy-button {
+    background-color: #555;
+    color: var(--text-light);
+    border: none;
+    padding: 8px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'YekanBakh', sans-serif;
+    margin-top: 20px;
+    transition: background-color 0.2s, transform 0.2s;
+    font-weight: normal;
+}
+
+.copy-button:hover {
+    background-color: #777;
+    transform: translateY(-2px);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
