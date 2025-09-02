@@ -1,13 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    // --- آدرس منابع ---
     const SUBSCRIPTION_CODES_FILE = 'subscription_codes.txt';
-    const DNS_LIST_FILE = 'dns_list.txt';
-    const ACTIVATION_DATA_KEY = 'yarGameDnsActivations';
+    const LOCAL_DNS_FILE = 'dns_list.txt';
+    const REMOTE_DNS_URL = 'https://public-dns.info/nameservers.csv'; // لینک منبع دوم
 
+    // --- متغیرهای سراسری ---
     let validSubscriptionCodes = [];
     let dnsList = [];
-    let sessionHistory = [];
 
+    // --- انتخاب عناصر صفحه ---
     const loginSection = document.getElementById('login-section');
     const generatorSection = document.getElementById('generator-section');
     const subscriptionCodeInput = document.getElementById('subscription-code');
@@ -19,25 +21,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const pingValueEl = document.getElementById('ping-value');
     const dnsFlagEl = document.getElementById('dns-flag');
     const dnsCountryEl = document.getElementById('dns-country');
-    const historySection = document.getElementById('history-section');
-    const historyList = document.getElementById('history-list');
 
-    // --- توابع اصلی ---
+    // --- توابع برای خواندن فایل‌ها و لینک ---
 
-    async function loadFiles() {
+    // این تابع کدهای اشتراک رو از فایل محلی میخونه
+    async function loadSubscriptionCodes() {
         try {
-            const [codesResponse, dnsResponse] = await Promise.all([
-                fetch(SUBSCRIPTION_CODES_FILE),
-                fetch(DNS_LIST_FILE)
-            ]);
-            if (!codesResponse.ok) throw new Error(`خطا در بارگذاری کدهای اشتراک`);
-            if (!dnsResponse.ok) throw new Error(`خطا در بارگذاری لیست DNS`);
-            
-            const codesText = await codesResponse.text();
-            validSubscriptionCodes = codesText.split('\n').map(code => code.trim()).filter(Boolean);
+            const response = await fetch(SUBSCRIPTION_CODES_FILE);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const text = await response.text();
+            validSubscriptionCodes = text.split('\n').map(code => code.trim()).filter(Boolean);
+        } catch (error) {
+            console.error('Error loading subscription codes:', error);
+            alert('خطا در بارگذاری کدهای اشتراک.');
+        }
+    }
 
-            const dnsText = await dnsResponse.text();
-            dnsList = dnsText.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+    // این تابع DNS ها رو از دو منبع (محلی و اینترنتی) میخونه و ترکیب میکنه
+    async function loadDnsList() {
+        let localDns = [];
+        let remoteDns = [];
+
+        // خواندن از فایل محلی
+        try {
+            const response = await fetch(LOCAL_DNS_FILE);
+            const text = await response.text();
+            localDns = text.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
                 const parts = line.split(',');
                 if (parts.length < 4) return null;
                 const dns1 = parts[0].split(':')[1]?.trim();
@@ -47,60 +56,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dns1 && dns2 && country && flag) return { dns1, dns2, country, flag };
                 return null;
             }).filter(Boolean);
-
         } catch (error) {
-            console.error('Error loading files:', error);
-            alert('خطا در بارگذاری فایل‌ها. مطمئن شوید پروژه روی سرور محلی اجرا شده و فایل‌های .txt وجود دارند.');
+            console.warn('Could not load local DNS file. Continuing without it.', error);
+        }
+
+        // خواندن از لینک اینترنتی
+        try {
+            const response = await fetch(REMOTE_DNS_URL);
+            const text = await response.text();
+            // فایل CSV فقط یک IP در هر خط داره، پس dns2 رو خالی میذاریم
+            remoteDns = text.split('\n').slice(1) // Skip header row
+                .map(line => line.trim()).filter(Boolean).map(line => {
+                    const parts = line.split(',');
+                    if (parts.length < 2) return null;
+                    const dns1 = parts[0];
+                    const countryCode = parts[1];
+                    // تبدیل کد کشور به اسم و پرچم (برای چند کشور معروف)
+                    const countryInfo = getCountryInfo(countryCode);
+                    if (dns1) return { dns1, dns2: '0.0.0.0', country: countryInfo.name, flag: countryInfo.flag };
+                    return null;
+                }).filter(Boolean);
+        } catch (error) {
+            console.warn('Could not load remote DNS URL. Continuing without it.', error);
+        }
+
+        // ترکیب دو لیست و حذف موارد تکراری
+        const combinedList = [...localDns, ...remoteDns];
+        const uniqueDns = new Map(combinedList.map(item => [item.dns1, item]));
+        dnsList = Array.from(uniqueDns.values());
+
+        if (dnsList.length === 0) {
+            alert('هیچ DNS معتبری بارگذاری نشد. لطفاً فایل‌های منبع را بررسی کنید.');
         }
     }
 
-    function getDurationFromCode(code) {
-        if (code.includes('-1M-')) return 30;
-        if (code.includes('-2M-')) return 60;
-        if (code.includes('-3M-')) return 90;
-        if (code.includes('-5M-')) return 150;
-        if (code.includes('-LT-')) return Infinity; // دائمی
-        return null;
+    // تابع کمکی برای تبدیل کد کشور به اسم و پرچم
+    function getCountryInfo(code) {
+        const countryMap = {
+            'US': { name: 'USA', flag: '🇺🇸' },
+            'DE': { name: 'Germany', flag: '🇩🇪' },
+            'GB': { name: 'UK', flag: '🇬🇧' },
+            'RU': { name: 'Russia', flag: '🇷🇺' },
+            'NL': { name: 'Netherlands', flag: '🇳🇱' },
+            'CH': { name: 'Switzerland', flag: '🇨🇭' },
+            'IR': { name: 'Iran', flag: '🇮🇷' },
+        };
+        return countryMap[code] || { name: code, flag: '🏳️' };
     }
 
+    // --- بقیه توابع برنامه ---
     function handleLogin() {
         const enteredCode = subscriptionCodeInput.value.trim();
-        if (!validSubscriptionCodes.includes(enteredCode)) {
+        if (validSubscriptionCodes.includes(enteredCode)) {
+            loginSection.classList.add('hidden');
+            generatorSection.classList.remove('hidden');
+        } else {
             alert('کد اشتراک وارد شده معتبر نیست!');
-            return;
         }
-
-        const duration = getDurationFromCode(enteredCode);
-        if (duration === null) {
-            alert('فرمت کد اشتراک صحیح نیست.');
-            return;
-        }
-
-        if (duration !== Infinity) {
-            const activations = JSON.parse(localStorage.getItem(ACTIVATION_DATA_KEY) || '{}');
-            const activationDateStr = activations[enteredCode];
-
-            if (activationDateStr) {
-                const activationDate = new Date(activationDateStr);
-                const expiryDate = new Date(activationDate);
-                expiryDate.setDate(expiryDate.getDate() + duration);
-                
-                if (new Date() > expiryDate) {
-                    alert('این کد اشتراک منقضی شده است.');
-                    return;
-                }
-            } else {
-                // اولین استفاده از کد، تاریخ را ثبت کن
-                activations[enteredCode] = new Date().toISOString();
-                localStorage.setItem(ACTIVATION_DATA_KEY, JSON.stringify(activations));
-            }
-        }
-        
-        // موفقیت در ورود
-        sessionHistory = []; // پاک کردن سابقه با هر ورود جدید
-        updateHistoryDisplay();
-        loginSection.classList.add('hidden');
-        generatorSection.classList.remove('hidden');
     }
 
     function generateDns() {
@@ -111,44 +123,22 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const randomIndex = Math.floor(Math.random() * dnsList.length);
         const selectedDns = dnsList[randomIndex];
-        
-        sessionHistory.unshift(selectedDns); // اضافه کردن به ابتدای لیست سابقه
-        updateHistoryDisplay();
 
-        displayDns(selectedDns);
-    }
-    
-    function displayDns(dnsData) {
-        const formattedDns = `dns1: ${dnsData.dns1}\ndns2: ${dnsData.dns2}`;
+        const formattedDns = `dns1: ${selectedDns.dns1}\ndns2: ${selectedDns.dns2}`;
         dnsOutput.textContent = formattedDns;
         
-        dnsFlagEl.textContent = dnsData.flag;
-        dnsCountryEl.textContent = dnsData.country;
+        dnsFlagEl.textContent = selectedDns.flag;
+        dnsCountryEl.textContent = selectedDns.country;
 
         const ping = Math.floor(Math.random() * (250 - 100 + 1)) + 100;
         pingValueEl.textContent = ping;
         
-        pingValueEl.className = 'ping-value'; // Reset classes
+        pingValueEl.classList.remove('ping-good', 'ping-medium', 'ping-bad');
         if (ping < 150) pingValueEl.classList.add('ping-good');
         else if (ping < 200) pingValueEl.classList.add('ping-medium');
         else pingValueEl.classList.add('ping-bad');
         
         dnsResultContainer.classList.remove('hidden');
-    }
-
-    function updateHistoryDisplay() {
-        if (sessionHistory.length > 0) {
-            historySection.classList.remove('hidden');
-            historyList.innerHTML = '';
-            sessionHistory.forEach(dns => {
-                const li = document.createElement('li');
-                li.innerHTML = `<span class="history-info">${dns.flag}</span> <span class="history-dns">${dns.dns1}</span>`;
-                li.onclick = () => displayDns(dns); // با کلیک روی آیتم سابقه، آن را نمایش بده
-                historyList.appendChild(li);
-            });
-        } else {
-            historySection.classList.add('hidden');
-        }
     }
 
     function copyDnsToClipboard() {
@@ -160,12 +150,13 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch(err => {
                 console.error('Failed to copy DNS:', err);
-                alert('خطا در کپی کردن.');
+                alert('خطا در کپی کردن. لطفاً به صورت دستی کپی کنید.');
             });
     }
     
     async function initializeApp() {
-        await loadFiles();
+        await loadSubscriptionCodes();
+        await loadDnsList();
         loginBtn.addEventListener('click', handleLogin);
         generateBtn.addEventListener('click', generateDns);
         copyBtn.addEventListener('click', copyDnsToClipboard);
