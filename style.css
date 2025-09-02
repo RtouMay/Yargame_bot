@@ -228,3 +228,48 @@ pre {
         padding: 10px;
     }
 }
+/* ... (تمام استایل‌های قبلی اینجا هستند) ... */
+
+#history-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #444;
+    animation: fadeIn 0.5s ease;
+}
+
+#history-section h3 {
+    font-size: 1.1em;
+    color: var(--text-highlight);
+    margin-bottom: 15px;
+    text-align: right;
+}
+
+#history-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#history-list li {
+    background-color: var(--component-bg);
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Consolas', 'Courier New', monospace;
+    direction: ltr;
+    font-size: 0.9em;
+}
+
+.history-dns {
+    color: var(--text-light);
+}
+
+.history-info {
+    color: var(--text-medium);
+    font-size: 1.2em;
+}
