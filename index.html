@@ -21,6 +21,7 @@
             <h1>DNS Generator</h1>
             <p>برای دریافت DNS جدید، روی دکمه زیر کلیک کنید.</p>
             <button id="generate-btn" class="action-button">Generate DNS</button>
+            
             <div id="dns-result-container" class="hidden">
                 <h2>DNS شما:</h2>
                 <div id="dns-info">
@@ -32,6 +33,11 @@
                     Ping: <span id="ping-value">...</span> ms
                 </div>
                 <button id="copy-btn" class="copy-button">کپی کردن</button>
+            </div>
+            
+            <div id="history-section" class="hidden">
+                <h3>سابقه DNS های این جلسه:</h3>
+                <ul id="history-list"></ul>
             </div>
         </div>
     </div>
