@@ -2,9 +2,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const SUBSCRIPTION_CODES_FILE = 'subscription_codes.txt';
     const DNS_LIST_FILE = 'dns_list.txt';
+    const ACTIVATION_DATA_KEY = 'yarGameDnsActivations';
 
     let validSubscriptionCodes = [];
     let dnsList = [];
+    let sessionHistory = [];
 
     const loginSection = document.getElementById('login-section');
     const generatorSection = document.getElementById('generator-section');
@@ -17,82 +19,136 @@ document.addEventListener('DOMContentLoaded', () => {
     const pingValueEl = document.getElementById('ping-value');
     const dnsFlagEl = document.getElementById('dns-flag');
     const dnsCountryEl = document.getElementById('dns-country');
+    const historySection = document.getElementById('history-section');
+    const historyList = document.getElementById('history-list');
 
-    async function loadSubscriptionCodes() {
-        try {
-            const response = await fetch(SUBSCRIPTION_CODES_FILE);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const text = await response.text();
-            validSubscriptionCodes = text.split('\n').map(code => code.trim()).filter(Boolean);
-            if (validSubscriptionCodes.length === 0) console.warn('Subscription codes file is empty or missing.');
-        } catch (error) {
-            console.error('Error loading subscription codes:', error);
-            alert('خطا در بارگذاری کدهای اشتراک. لطفا مطمئن شوید فایل subscription_codes.txt وجود دارد.');
-        }
-    }
+    // --- توابع اصلی ---
 
-    async function loadDnsList() {
+    async function loadFiles() {
         try {
-            const response = await fetch(DNS_LIST_FILE);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const text = await response.text();
-            dnsList = text.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+            const [codesResponse, dnsResponse] = await Promise.all([
+                fetch(SUBSCRIPTION_CODES_FILE),
+                fetch(DNS_LIST_FILE)
+            ]);
+            if (!codesResponse.ok) throw new Error(`خطا در بارگذاری کدهای اشتراک`);
+            if (!dnsResponse.ok) throw new Error(`خطا در بارگذاری لیست DNS`);
+            
+            const codesText = await codesResponse.text();
+            validSubscriptionCodes = codesText.split('\n').map(code => code.trim()).filter(Boolean);
+
+            const dnsText = await dnsResponse.text();
+            dnsList = dnsText.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
                 const parts = line.split(',');
                 if (parts.length < 4) return null;
-                
                 const dns1 = parts[0].split(':')[1]?.trim();
                 const dns2 = parts[1].split(':')[1]?.trim();
                 const country = parts[2]?.trim();
                 const flag = parts[3]?.trim();
-
                 if (dns1 && dns2 && country && flag) return { dns1, dns2, country, flag };
                 return null;
             }).filter(Boolean);
-            if (dnsList.length === 0) console.warn('DNS list file is empty or has incorrect format.');
+
         } catch (error) {
-            console.error('Error loading DNS list:', error);
-            alert('خطا در بارگذاری لیست DNS. لطفا مطمئن شوید فایل dns_list.txt وجود دارد و فرمت آن صحیح است.');
+            console.error('Error loading files:', error);
+            alert('خطا در بارگذاری فایل‌ها. مطمئن شوید پروژه روی سرور محلی اجرا شده و فایل‌های .txt وجود دارند.');
         }
+    }
+
+    function getDurationFromCode(code) {
+        if (code.includes('-1M-')) return 30;
+        if (code.includes('-2M-')) return 60;
+        if (code.includes('-3M-')) return 90;
+        if (code.includes('-5M-')) return 150;
+        if (code.includes('-LT-')) return Infinity; // دائمی
+        return null;
     }
 
     function handleLogin() {
         const enteredCode = subscriptionCodeInput.value.trim();
-        if (validSubscriptionCodes.includes(enteredCode)) {
-            loginSection.classList.add('hidden');
-            generatorSection.classList.remove('hidden');
-        } else {
+        if (!validSubscriptionCodes.includes(enteredCode)) {
             alert('کد اشتراک وارد شده معتبر نیست!');
+            return;
         }
+
+        const duration = getDurationFromCode(enteredCode);
+        if (duration === null) {
+            alert('فرمت کد اشتراک صحیح نیست.');
+            return;
+        }
+
+        if (duration !== Infinity) {
+            const activations = JSON.parse(localStorage.getItem(ACTIVATION_DATA_KEY) || '{}');
+            const activationDateStr = activations[enteredCode];
+
+            if (activationDateStr) {
+                const activationDate = new Date(activationDateStr);
+                const expiryDate = new Date(activationDate);
+                expiryDate.setDate(expiryDate.getDate() + duration);
+                
+                if (new Date() > expiryDate) {
+                    alert('این کد اشتراک منقضی شده است.');
+                    return;
+                }
+            } else {
+                // اولین استفاده از کد، تاریخ را ثبت کن
+                activations[enteredCode] = new Date().toISOString();
+                localStorage.setItem(ACTIVATION_DATA_KEY, JSON.stringify(activations));
+            }
+        }
+        
+        // موفقیت در ورود
+        sessionHistory = []; // پاک کردن سابقه با هر ورود جدید
+        updateHistoryDisplay();
+        loginSection.classList.add('hidden');
+        generatorSection.classList.remove('hidden');
     }
 
     function generateDns() {
         if (dnsList.length === 0) {
-            alert('لیست DNS خالی است یا بارگذاری نشده. لطفاً فایل dns_list.txt را بررسی کنید.');
+            alert('لیست DNS در دسترس نیست.');
             return;
         }
         
         const randomIndex = Math.floor(Math.random() * dnsList.length);
         const selectedDns = dnsList[randomIndex];
+        
+        sessionHistory.unshift(selectedDns); // اضافه کردن به ابتدای لیست سابقه
+        updateHistoryDisplay();
 
-        const formattedDns = `dns1: ${selectedDns.dns1}\ndns2: ${selectedDns.dns2}`;
+        displayDns(selectedDns);
+    }
+    
+    function displayDns(dnsData) {
+        const formattedDns = `dns1: ${dnsData.dns1}\ndns2: ${dnsData.dns2}`;
         dnsOutput.textContent = formattedDns;
         
-        dnsFlagEl.textContent = selectedDns.flag;
-        dnsCountryEl.textContent = selectedDns.country;
+        dnsFlagEl.textContent = dnsData.flag;
+        dnsCountryEl.textContent = dnsData.country;
 
         const ping = Math.floor(Math.random() * (250 - 100 + 1)) + 100;
         pingValueEl.textContent = ping;
         
-        pingValueEl.classList.remove('ping-good', 'ping-medium', 'ping-bad');
-        if (ping < 150) {
-            pingValueEl.classList.add('ping-good');
-        } else if (ping < 200) {
-            pingValueEl.classList.add('ping-medium');
-        } else {
-            pingValueEl.classList.add('ping-bad');
-        }
+        pingValueEl.className = 'ping-value'; // Reset classes
+        if (ping < 150) pingValueEl.classList.add('ping-good');
+        else if (ping < 200) pingValueEl.classList.add('ping-medium');
+        else pingValueEl.classList.add('ping-bad');
         
         dnsResultContainer.classList.remove('hidden');
+    }
+
+    function updateHistoryDisplay() {
+        if (sessionHistory.length > 0) {
+            historySection.classList.remove('hidden');
+            historyList.innerHTML = '';
+            sessionHistory.forEach(dns => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="history-info">${dns.flag}</span> <span class="history-dns">${dns.dns1}</span>`;
+                li.onclick = () => displayDns(dns); // با کلیک روی آیتم سابقه، آن را نمایش بده
+                historyList.appendChild(li);
+            });
+        } else {
+            historySection.classList.add('hidden');
+        }
     }
 
     function copyDnsToClipboard() {
@@ -104,13 +160,12 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch(err => {
                 console.error('Failed to copy DNS:', err);
-                alert('خطا در کپی کردن. لطفاً به صورت دستی کپی کنید.');
+                alert('خطا در کپی کردن.');
             });
     }
     
     async function initializeApp() {
-        await loadSubscriptionCodes();
-        await loadDnsList();
+        await loadFiles();
         loginBtn.addEventListener('click', handleLogin);
         generateBtn.addEventListener('click', generateDns);
         copyBtn.addEventListener('click', copyDnsToClipboard);
